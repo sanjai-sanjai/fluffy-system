@@ -134,7 +134,14 @@ export default function EquationBuilder() {
           score: prev.score + 1,
         }));
 
+        setSuccessMessage(`Atoms balanced! You've successfully balanced this equation.`);
+
         setTimeout(() => {
+          setShowSuccessPopup(true);
+        }, 800);
+
+        setTimeout(() => {
+          setShowSuccessPopup(false);
           if (gameState.currentEquationIndex < EQUATIONS.length - 1) {
             setGameState((prev) => ({
               ...prev,
@@ -148,7 +155,7 @@ export default function EquationBuilder() {
           } else {
             setShowCompletion(true);
           }
-        }, 2000);
+        }, 2800);
       }
     } else {
       setGameState((prev) => ({ ...prev, isBalanced: false, showBalanceLabel: false }));
@@ -207,6 +214,9 @@ export default function EquationBuilder() {
     }));
   };
 
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+
   const handleRetry = () => {
     setGameState({
       currentEquationIndex: 0,
@@ -243,6 +253,19 @@ export default function EquationBuilder() {
           0%, 100% { transform: scale(1); }
           50% { transform: scale(1.1); }
         }
+        @keyframes success-popup-scale {
+          0% { transform: scale(0.8) translateY(20px); opacity: 0; }
+          50% { transform: scale(1.05) translateY(-10px); }
+          100% { transform: scale(1) translateY(0); opacity: 1; }
+        }
+        @keyframes success-popup-bounce {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-8px); }
+        }
+        @keyframes confetti-fall {
+          0% { transform: translateY(-10px) rotateZ(0deg); opacity: 1; }
+          100% { transform: translateY(120px) rotateZ(360deg); opacity: 0; }
+        }
         .balance-glow {
           animation: balance-glow 2s ease-in-out infinite;
         }
@@ -254,6 +277,15 @@ export default function EquationBuilder() {
         }
         .atom-pulse {
           animation: atom-pulse 0.5s ease-in-out;
+        }
+        .success-popup {
+          animation: success-popup-scale 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        .success-popup-bounce {
+          animation: success-popup-bounce 0.6s ease-in-out 0.5s;
+        }
+        .confetti {
+          animation: confetti-fall 1s ease-in forwards;
         }
       `}</style>
 
@@ -484,6 +516,44 @@ export default function EquationBuilder() {
 
   return (
     <>
+      {showSuccessPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+          <div className="success-popup relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl p-8 max-w-md mx-4 border-2 border-green-500/50">
+            {/* Confetti */}
+            {[...Array(6)].map((_, i) => (
+              <div
+                key={i}
+                className="confetti absolute text-2xl pointer-events-none"
+                style={{
+                  left: `${20 + i * 15}%`,
+                  top: '-10px',
+                  animationDelay: `${i * 0.1}s`,
+                }}
+              >
+                {['✨', '🎉', '⭐', '🌟'][i % 4]}
+              </div>
+            ))}
+
+            <div className="text-center space-y-4">
+              <div className="text-5xl animate-bounce">
+                ✨
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-green-600 mb-2">Equation Balanced!</h3>
+                <p className="text-gray-600 dark:text-gray-300 text-sm">
+                  Atoms are now equal on both sides. You've got the chemistry right!
+                </p>
+              </div>
+              <div className="pt-2">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Moving to next reaction...
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ConceptIntroPopup
         isOpen={showIntro && !gameStarted}
         onStart={() => {

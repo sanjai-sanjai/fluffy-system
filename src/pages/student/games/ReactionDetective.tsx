@@ -8,70 +8,106 @@ import { useNavigate } from "react-router-dom";
 interface Reaction {
   id: string;
   substance1: string;
+  substance1Formula: string;
   substance2: string;
+  substance2Formula: string;
   result: string;
+  resultColor: string;
+  productFormula: string;
   emoji1: string;
   emoji2: string;
   effects: string[];
   effectEmojis: string[];
   correctTags: string[];
+  reactionColor: string;
+  visualEffects: string[];
 }
 
 const REACTIONS: Reaction[] = [
   {
     id: "iron-acid",
     substance1: "Iron",
+    substance1Formula: "Fe",
     substance2: "Acid",
-    result: "Iron melts",
+    substance2Formula: "HCl",
+    result: "Iron reacts",
+    resultColor: "Orange-Brown",
+    productFormula: "FeCl₂ + H₂",
     emoji1: "⬛",
     emoji2: "🟡",
     effects: ["Bubbling", "Heat"],
     effectEmojis: ["💨", "🔥"],
     correctTags: ["gas", "heat"],
+    reactionColor: "from-gray-400 to-orange-400",
+    visualEffects: ["bubbles", "heat"],
   },
   {
     id: "milk-vinegar",
     substance1: "Milk",
+    substance1Formula: "Ca₃(PO₄)₂",
     substance2: "Vinegar",
+    substance2Formula: "CH₃COOH",
     result: "Milk curdles",
+    resultColor: "Yellowish-White",
+    productFormula: "Casein (Curdles) + CO₂",
     emoji1: "🥛",
     emoji2: "🍶",
     effects: ["Color change", "Bubbling"],
     effectEmojis: ["🎨", "💨"],
     correctTags: ["color_change", "gas"],
+    reactionColor: "from-white to-yellow-100",
+    visualEffects: ["color_change", "bubbles"],
   },
   {
     id: "water-copper",
     substance1: "Water",
+    substance1Formula: "H₂O",
     substance2: "Copper Salt",
+    substance2Formula: "CuSO₄",
     result: "Blue solution",
+    resultColor: "Blue",
+    productFormula: "CuSO₄·H₂O (Hydrated)",
     emoji1: "💧",
     emoji2: "🔮",
     effects: ["Color change"],
     effectEmojis: ["🎨"],
     correctTags: ["color_change"],
+    reactionColor: "from-blue-200 to-blue-500",
+    visualEffects: ["color_change"],
   },
   {
     id: "bread-yeast",
     substance1: "Flour & Yeast",
+    substance1Formula: "C₆H₁₀O₅",
     substance2: "Water",
+    substance2Formula: "H₂O",
     result: "Bread rises",
+    resultColor: "Golden-Brown",
+    productFormula: "CO₂ + C₂H₅OH",
     emoji1: "🍞",
     emoji2: "💧",
     effects: ["Bubbling", "Growth"],
     effectEmojis: ["💨", "📈"],
     correctTags: ["gas", "physical_change"],
+    reactionColor: "from-yellow-100 to-orange-200",
+    visualEffects: ["bubbles", "growth"],
   },
   {
     id: "burning-candle",
     substance1: "Candle",
+    substance1Formula: "C₂₀H₄₂",
     substance2: "Oxygen",
+    substance2Formula: "O₂",
     result: "Light & Heat",
+    resultColor: "Yellow-Orange",
+    productFormula: "CO₂ + H₂O",
     emoji1: "🕯️",
     emoji2: "💨",
     effects: ["Heat", "Light"],
     effectEmojis: ["🔥", "💡"],
     correctTags: ["heat", "light"],
+    reactionColor: "from-yellow-300 to-red-400",
+    visualEffects: ["heat", "light"],
   },
 ];
 
@@ -90,6 +126,8 @@ interface GameState {
   selectedEffects: string[];
   hasReacted: boolean;
   feedback: string;
+  isReacting: boolean;
+  showObservationPanel: boolean;
 }
 
 export default function ReactionDetective() {
@@ -104,6 +142,8 @@ export default function ReactionDetective() {
     selectedEffects: [],
     hasReacted: false,
     feedback: "",
+    isReacting: false,
+    showObservationPanel: false,
   });
 
   const currentReaction = REACTIONS[gameState.currentReactionIndex];
@@ -113,8 +153,17 @@ export default function ReactionDetective() {
 
     setGameState((prev) => ({
       ...prev,
-      hasReacted: true,
+      isReacting: true,
     }));
+
+    setTimeout(() => {
+      setGameState((prev) => ({
+        ...prev,
+        hasReacted: true,
+        isReacting: false,
+        showObservationPanel: true,
+      }));
+    }, 2500);
   };
 
   const handleEffectTag = (effectId: string) => {
@@ -155,7 +204,9 @@ export default function ReactionDetective() {
                 currentReactionIndex: prev.currentReactionIndex + 1,
                 selectedEffects: [],
                 hasReacted: false,
+                showObservationPanel: false,
                 feedback: "",
+                isReacting: false,
               }));
             } else {
               setShowCompletion(true);
@@ -182,12 +233,56 @@ export default function ReactionDetective() {
       selectedEffects: [],
       hasReacted: false,
       feedback: "",
+      isReacting: false,
+      showObservationPanel: false,
     });
     setShowCompletion(false);
   };
 
   const gameView = (
     <div className={`${isFullscreen ? "fixed inset-0 z-50 bg-background" : ""} flex flex-col`}>
+      <style>{`
+        @keyframes bubble-rise {
+          0% { transform: translateY(0) translateX(0); opacity: 1; }
+          100% { transform: translateY(-80px) translateX(var(--tx, 0)); opacity: 0; }
+        }
+        @keyframes heat-pulse {
+          0% { transform: scale(1) translateY(0); opacity: 0.7; }
+          100% { transform: scale(1.3) translateY(-40px); opacity: 0; }
+        }
+        @keyframes light-flash {
+          0%, 100% { opacity: 0; }
+          50% { opacity: 1; }
+        }
+        @keyframes smoke-rise {
+          0% { transform: translateY(0) scale(0.5); opacity: 0; }
+          100% { transform: translateY(-100px) scale(1.2); opacity: 0; }
+        }
+        @keyframes color-shift {
+          0% { filter: hue-rotate(0deg); }
+          100% { filter: hue-rotate(360deg); }
+        }
+        @keyframes observation-slide-up {
+          0% { transform: translateY(30px); opacity: 0; }
+          100% { transform: translateY(0); opacity: 1; }
+        }
+        .bubble {
+          animation: bubble-rise 1.5s ease-out forwards;
+        }
+        .heat-wave {
+          animation: heat-pulse 1.2s ease-out forwards;
+        }
+        .light-effect {
+          animation: light-flash 0.8s ease-in-out;
+        }
+        .smoke-particle {
+          animation: smoke-rise 2s ease-out forwards;
+        }
+        .observation-panel {
+          animation: observation-slide-up 0.5s ease-out forwards;
+        }
+      `}</style>
+
       <div className={`${isFullscreen ? "h-screen" : "h-[650px]"} flex flex-col overflow-auto`}>
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-border/50">
@@ -210,86 +305,191 @@ export default function ReactionDetective() {
           </button>
         </div>
 
-        <div className="flex-1 p-6 overflow-auto flex flex-col">
-          {/* Lab Setup */}
-          <div className="mb-6 space-y-4">
+        <div className="flex-1 p-6 overflow-auto flex flex-col gap-6">
+          {/* Reaction Chamber */}
+          <div className="space-y-4">
             <p className="text-sm font-semibold text-muted-foreground text-center">Mix these substances and observe what happens</p>
 
-            {/* Substances */}
-            <div className="flex items-center justify-center gap-4">
-              {/* Substance 1 */}
-              <div className="flex flex-col items-center">
-                <div className="text-5xl mb-2">{currentReaction.emoji1}</div>
-                <p className="text-sm font-semibold">{currentReaction.substance1}</p>
-              </div>
-
-              {/* Plus Sign */}
-              <div className="text-3xl text-muted-foreground">+</div>
-
-              {/* Substance 2 */}
-              <div className="flex flex-col items-center">
-                <div className="text-5xl mb-2">{currentReaction.emoji2}</div>
-                <p className="text-sm font-semibold">{currentReaction.substance2}</p>
-              </div>
-            </div>
-
-            {/* Mix Button */}
-            <button
-              onClick={handleMix}
-              disabled={gameState.hasReacted}
-              className={`w-full py-3 rounded-lg font-semibold transition-all ${
-                gameState.hasReacted
-                  ? "opacity-50 cursor-not-allowed"
-                  : "bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70 text-secondary-foreground hover:scale-105 active:scale-95"
-              }`}
-            >
-              🧪 Mix Substances
-            </button>
-          </div>
-
-          {/* Reaction Effects */}
-          {gameState.hasReacted && (
-            <div className="mb-6 space-y-4 animate-pulse">
-              <div className="bg-gradient-to-r from-secondary/20 to-secondary/10 rounded-xl p-6 border-2 border-secondary/40">
-                <p className="text-center font-bold text-lg mb-4">Reaction happening! What do you observe? 👀</p>
-
-                <div className="grid grid-cols-2 gap-3">
-                  {currentReaction.effectEmojis.map((emoji, index) => (
-                    <div key={index} className="text-3xl text-center animate-bounce" style={{ animationDelay: `${index * 0.1}s` }}>
-                      {emoji}
+            {/* Reaction Container */}
+            <div className="relative bg-gradient-to-br from-gray-100 to-gray-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl border-2 border-border p-8 min-h-64 flex flex-col items-center justify-center overflow-hidden">
+              {!gameState.isReacting && !gameState.hasReacted && (
+                <>
+                  {/* Pre-reaction substances */}
+                  <div className="flex items-center justify-center gap-6 w-full">
+                    {/* Substance 1 */}
+                    <div className="flex flex-col items-center">
+                      <div className="text-6xl mb-3 transition-transform hover:scale-110">{currentReaction.emoji1}</div>
+                      <p className="text-sm font-semibold text-center text-black dark:text-white">{currentReaction.substance1}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 font-mono mt-1">{currentReaction.substance1Formula}</p>
                     </div>
-                  ))}
-                </div>
-              </div>
 
-              {gameState.feedback && (
-                <div className="p-4 text-center rounded-lg bg-muted/50">
-                  <p className="font-semibold text-secondary">{gameState.feedback}</p>
-                </div>
+                    {/* Plus Sign */}
+                    <div className="text-3xl text-muted-foreground">+</div>
+
+                    {/* Substance 2 */}
+                    <div className="flex flex-col items-center">
+                      <div className="text-6xl mb-3 transition-transform hover:scale-110">{currentReaction.emoji2}</div>
+                      <p className="text-sm font-semibold text-center text-black dark:text-white">{currentReaction.substance2}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 font-mono mt-1">{currentReaction.substance2Formula}</p>
+                    </div>
+                  </div>
+
+                  {/* Mix Button */}
+                  <button
+                    onClick={handleMix}
+                    className="mt-6 px-6 py-3 bg-gradient-to-r from-secondary to-secondary/80 hover:from-secondary/90 hover:to-secondary/70 text-secondary-foreground font-bold rounded-lg transition-all hover:scale-105 active:scale-95 text-lg"
+                  >
+                    🧪 Mix Substances
+                  </button>
+                </>
               )}
 
-              {/* Effect Tags */}
-              <div className="space-y-2">
-                <p className="text-sm font-semibold text-muted-foreground">Tag the observable changes:</p>
-                <div className="grid grid-cols-2 gap-2">
-                  {EFFECT_OPTIONS.map((option) => (
-                    <button
-                      key={option.id}
-                      onClick={() => handleEffectTag(option.id)}
-                      disabled={!gameState.hasReacted}
-                      className={`p-3 rounded-lg transition-all flex flex-col items-center gap-2 ${
-                        gameState.selectedEffects.includes(option.id)
-                          ? "bg-secondary/30 border-2 border-secondary ring-2 ring-secondary/30 scale-105"
-                          : currentReaction.correctTags.includes(option.id)
-                            ? "bg-muted/50 border-2 border-border hover:border-secondary/50 cursor-pointer"
-                            : "bg-muted/30 border-2 border-border/30 cursor-default opacity-60"
-                      }`}
-                    >
-                      <span className="text-2xl">{option.emoji}</span>
-                      <span className="text-xs font-semibold">{option.label}</span>
-                    </button>
-                  ))}
+              {(gameState.isReacting || gameState.hasReacted) && (
+                <div className="w-full h-full flex flex-col items-center justify-center gap-4 relative">
+                  {/* Reaction Result with Dynamic Color */}
+                  <div className={`bg-gradient-to-br ${currentReaction.reactionColor} rounded-2xl w-32 h-32 flex items-center justify-center text-5xl shadow-lg ${gameState.isReacting ? 'animate-pulse' : ''}`}>
+                    {currentReaction.effectEmojis[0]}
+                  </div>
+
+                  {/* Animated Visual Effects */}
+                  {gameState.isReacting && (
+                    <>
+                      {/* Bubbles */}
+                      {currentReaction.visualEffects.includes("bubbles") && (
+                        <>
+                          {[...Array(6)].map((_, i) => (
+                            <div
+                              key={`bubble-${i}`}
+                              className="bubble absolute text-2xl pointer-events-none"
+                              style={{
+                                left: `${30 + i * 10}%`,
+                                bottom: '20%',
+                                '--tx': `${Math.random() * 40 - 20}px`,
+                                animationDelay: `${i * 0.15}s`,
+                              } as React.CSSProperties}
+                            >
+                              💨
+                            </div>
+                          ))}
+                        </>
+                      )}
+
+                      {/* Heat Waves */}
+                      {currentReaction.visualEffects.includes("heat") && (
+                        <>
+                          {[...Array(4)].map((_, i) => (
+                            <div
+                              key={`heat-${i}`}
+                              className="heat-wave absolute text-3xl pointer-events-none"
+                              style={{
+                                left: `${35 + i * 10}%`,
+                                bottom: '25%',
+                                animationDelay: `${i * 0.2}s`,
+                              }}
+                            >
+                              🔥
+                            </div>
+                          ))}
+                        </>
+                      )}
+
+                      {/* Light Flashes */}
+                      {currentReaction.visualEffects.includes("light") && (
+                        <>
+                          {[...Array(3)].map((_, i) => (
+                            <div
+                              key={`light-${i}`}
+                              className="light-effect absolute text-4xl pointer-events-none"
+                              style={{
+                                left: `${35 + i * 15}%`,
+                                bottom: '20%',
+                                animationDelay: `${i * 0.25}s`,
+                              }}
+                            >
+                              💡
+                            </div>
+                          ))}
+                        </>
+                      )}
+
+                      {/* Smoke/Growth */}
+                      {currentReaction.visualEffects.includes("growth") && (
+                        <>
+                          {[...Array(5)].map((_, i) => (
+                            <div
+                              key={`smoke-${i}`}
+                              className="smoke-particle absolute text-2xl pointer-events-none"
+                              style={{
+                                left: `${30 + i * 8}%`,
+                                bottom: '15%',
+                                animationDelay: `${i * 0.1}s`,
+                              }}
+                            >
+                              ☁️
+                            </div>
+                          ))}
+                        </>
+                      )}
+
+                      {/* Color Change Label */}
+                      {currentReaction.visualEffects.includes("color_change") && (
+                        <div className="absolute top-6 left-6 bg-gradient-to-r from-blue-400 to-purple-400 text-white px-3 py-1 rounded-full text-xs font-bold animate-bounce">
+                          🎨 Color Changing
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {gameState.hasReacted && !gameState.isReacting && (
+                    <div className="text-center space-y-3">
+                      <p className="text-lg font-bold text-black dark:text-white">Reaction Complete!</p>
+                      <div className="bg-muted/50 rounded-lg p-4 border-2 border-secondary/30 space-y-3">
+                        <div>
+                          <p className="text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-2">Chemical Equation</p>
+                          <p className="text-sm font-mono font-bold text-black dark:text-white bg-white/50 dark:bg-slate-700/50 rounded p-3 border border-secondary/30">
+                            {currentReaction.substance1Formula} + {currentReaction.substance2Formula} → {currentReaction.productFormula}
+                          </p>
+                        </div>
+                        <div className="border-t border-secondary/20 pt-3">
+                          <p className="text-sm font-semibold text-black dark:text-white">Product Color: <span className="text-secondary font-bold">{currentReaction.resultColor}</span></p>
+                        </div>
+                      </div>
+                      <p className="text-sm text-black dark:text-muted-foreground">What did you observe?</p>
+                    </div>
+                  )}
                 </div>
+              )}
+            </div>
+          </div>
+
+          {gameState.feedback && (
+            <div className="p-4 text-center rounded-lg bg-green-500/10 border-2 border-green-500/50">
+              <p className="font-semibold text-green-600">{gameState.feedback}</p>
+            </div>
+          )}
+
+          {/* Observation Panel */}
+          {gameState.showObservationPanel && (
+            <div className="observation-panel space-y-3">
+              <p className="text-sm font-bold text-foreground text-center">What did you observe? Select all that apply:</p>
+              <div className="grid grid-cols-2 gap-2">
+                {EFFECT_OPTIONS.map((option) => (
+                  <button
+                    key={option.id}
+                    onClick={() => handleEffectTag(option.id)}
+                    disabled={!gameState.showObservationPanel}
+                    className={`p-3 rounded-lg transition-all flex flex-col items-center gap-2 font-medium ${
+                      gameState.selectedEffects.includes(option.id)
+                        ? "bg-green-500/30 border-2 border-green-500 ring-2 ring-green-500/30 scale-105"
+                        : currentReaction.correctTags.includes(option.id)
+                          ? "bg-muted/50 border-2 border-border hover:border-green-500/50 cursor-pointer hover:scale-105"
+                          : "bg-muted/30 border-2 border-border/30 cursor-default opacity-50"
+                    }`}
+                  >
+                    <span className="text-2xl">{option.emoji}</span>
+                    <span className="text-xs font-semibold text-center">{option.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
